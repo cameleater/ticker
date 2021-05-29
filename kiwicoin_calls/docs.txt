@@ -1,0 +1,183 @@
+https://kiwi-coin.com/help.html#!/api-description/
+
+
+Request limits
+Do not make more than 600 requests per 10 minutes or we will ban your IP address.
+
+Public Data Functions
+Ticker
+GET https://kiwi-coin.com/api/ticker/
+Returns JSON object:
+
+last - last BTC price
+date - price date
+high - last 24 hours till date price high
+low - last 24 hours till date price low
+vwap - last 24 hours till date volume weighted average price: vwap
+volume - last 24 hours till date volume
+bid - highest buy order
+ask - lowest sell order
+
+
+
+Order book
+GET https://kiwi-coin.com/api/order_book/
+Returns JSON object:
+
+bids - array of open bid orders. Each item is a array with two elements: price and amount
+asks - array of open ask orders. Each item is a array with two elements: price and amount
+
+
+
+
+
+API authentication
+All private API calls require authentication. You need to provide 3 parameters to authenticate a request:
+
+API key
+Nonce
+Signature
+API key
+To get an API key, go to Account → API. Click Add new API key and set permissions.
+
+Nonce
+Nonce is a regular integer number. It must be increasing with every request you make. Read more about it here.
+
+Example: if you set nonce to 1 in your first request, you must set it to at least 2 in your second request. You are not required to start with 1. A common practice is to use unix time for that parameter.
+
+Signature
+Signature is a HMAC-SHA256 encoded message containing concatenated:
+
+Nonce
+Users ID (can be found at the top of page, labeled "Id:")
+API key
+";"
+Request name
+All the request's parameters (except key, signature and nonce) separated by ",". The order should be the same as in request's description.
+The HMAC-SHA256 code must be generated using a secret key that was generated with your API key. This code must be converted to it's hexadecimal representation (64 uppercase characters).
+
+Example (shell):
+
+$ UserId='Your access code'
+$ Key='Your API-Key'
+$ Secret='Your API-Key secret'
+$ Nonce="$(date '+%s')"
+$ Message="$Nonce$UserId$Key;balance"
+$ Signature="$(echo -n "$Message"|openssl dgst "-sha256" -hmac "$Secret"|awk '{print toupper($2)}')"
+$ curl --data "key=$Key&signature=$Signature&nonce=$Nonce" https://kiwi-coin.com/api/balance/
+Example (python):
+
+>>> import time
+>>> import math
+>>> import hmac
+>>> import hashlib
+>>> import requests
+>>> UserId = "Your access code"
+>>> Key = "Your API-Key"
+>>> Secret = "Your API-Key secret"
+>>> Nonce = math.trunc(time.time())
+>>> Message = str(Nonce) + str(UserId) + Key + ";trades,day"
+>>> Signature = hmac.new(Secret, msg=Message, digestmod=hashlib.sha256).hexdigest().upper()
+>>> R = requests.post("https://kiwi-coin.com/api/trades/", data={'key': Key, 'signature': Signature, 'nonce': Nonce, 'timeframe': "day"})
+>>> print(R.status_code, R.reason, R.text)
+Example of buy order (shell):
+
+$ UserId='Your access code'
+$ Key='Your API-Key'
+$ Secret='Your API-Key secret'
+$ Nonce="$(date '+%s')"
+$ Price='785' #note: 785.0 will not work, but 785.1 will
+$ Amount='2' #note: 2.0 will not work, but 2.1 will
+$ Message="$Nonce$UserId$Key;buy,$Price,$Amount"
+$ Signature="$(echo -n "$Message"|openssl dgst "-sha256" -hmac "$Secret"|awk '{print toupper($2)}')"
+$ curl --data "key=$Key&signature=$Signature&nonce=$Nonce&price=$Price&amount=$Amount" https://kiwi-coin.com/api/buy/
+Private Functions
+Account balance
+POST https://kiwi-coin.com/api/balance/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+Returns JSON object:
+
+nzd_balance - NZD balance
+btc_balance - BTC balance
+nzd_reserved - NZD reserved in open orders or waiting withdrawals
+btc_reserved - BTC reserved in open orders or waiting withdrawals
+nzd_available- NZD available for trading
+btc_available - BTC available for trading
+fee - customer trading fee
+Open orders
+POST https://kiwi-coin.com/api/open_orders/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+Returns JSON array of open orders. Each order is represented as object:
+
+id - order id
+datetime - date and time
+type - buy or sell (0 - buy; 1 - sell)
+price - price
+amount - amount
+List of trades
+POST https://kiwi-coin.com/api/trades/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+timeframe (optional) - time frame, can be: "minute", "hour", "day", "all". Default: "hour"
+Returns JSON array of trades happened. Each trade is represented as object:
+
+transaction_id - internal transaction ID
+datetime - date and time in unix format
+trade_type - buy or sell (0 - buy; 1 - sell)
+trade_size - size of trade in XBT
+price - price of trade in NZD for one XBT
+income - amount of XBT (for buy) or NZD (for sell) you have got
+fee - trading fee you have paid in XBT (for buy) or NZD (for sell)
+Cancel order
+POST https://kiwi-coin.com/api/cancel_order/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+id - order ID
+Returns 'true' if order has been found and canceled.
+
+Buy limit order
+POST https://kiwi-coin.com/api/buy/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+price - price
+amount - amount
+Returns JSON object representing an order:
+
+id - order id
+datetime - date and time
+type - buy or sell (0 - buy; 1 - sell)
+price - price
+amount - amount
+Sell limit order
+POST https://kiwi-coin.com/api/sell/
+Params:
+
+key - API key
+signature - signature
+nonce - nonce
+price - price
+amount - amount
+Returns JSON object representing an order:
+
+id - order id
+datetime - date and time
+type - buy or sell (0 - buy; 1 - sell)
+price - price
+amount - amount
